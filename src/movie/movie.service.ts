@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
 import { Movie } from './entity/movie.entity';
@@ -12,6 +18,8 @@ import { GetMoviesDto } from './dto/get-movies.dto';
 import { CommonService } from 'src/common/common.service';
 import { join } from 'path';
 import { rename } from 'fs/promises';
+import { User } from 'src/user/entity/user.entity';
+import { MovieUserLike } from './entity/movie-user-like.entity';
 
 @Injectable()
 export class MovieService {
@@ -20,11 +28,15 @@ export class MovieService {
     private readonly movieRepository: Repository<Movie>,
     @InjectRepository(MovieDetail)
     private readonly movieDetailRepository: Repository<MovieDetail>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(MovieUserLike)
+    private readonly movieUserLikeRepository: Repository<MovieUserLike>,
     private readonly commonService: CommonService,
     private readonly dataSource: DataSource,
   ) {}
 
-  async findAll(dto: GetMoviesDto) {
+  async findAll(dto: GetMoviesDto, userId?: number) {
     const { title } = dto;
 
     const qb = this.movieRepository
@@ -41,7 +53,36 @@ export class MovieService {
     const { nextCursor } =
       await this.commonService.applyCursorPaginationParamsToQb(qb, dto);
 
-    const [data, count] = await qb.getManyAndCount();
+    const [initialData, count] = await qb.getManyAndCount();
+    let data = initialData;
+
+    if (userId) {
+      const movieIds = data.map((movie) => movie.id);
+
+      const likedMovies =
+        movieIds.length < 1
+          ? []
+          : await this.movieUserLikeRepository
+              .createQueryBuilder('mul')
+              .leftJoinAndSelect('mul.user', 'user')
+              .leftJoinAndSelect('mul.movie', 'movie')
+              .where('movie.id IN(:...movieIds)', { movieIds })
+              .andWhere('mul.user.id = :userId', { userId })
+              .getMany();
+
+      const likedMovieMap = likedMovies.reduce(
+        (acc, next) => ({
+          ...acc,
+          [next.movie.id]: next.isLike,
+        }),
+        {},
+      );
+
+      data = data.map((movie) => ({
+        ...movie,
+        likeStatus: movie.id in likedMovieMap ? likedMovieMap[movie.id] : null,
+      }));
+    }
 
     return { data, nextCursor, count };
   }
@@ -227,28 +268,6 @@ export class MovieService {
     } finally {
       await qr.release();
     }
-
-    /**
-     *  await this.movieRepository.update({ id }, movieUpdateFields as Movie);
-
-    await this.movieDetailRepository.update(
-      { id: movie.detail.id },
-      { detail },
-    );
-
-    const newMovies = await this.movieRepository.findOne({
-      where: { id },
-      relations: ['detail', 'director'],
-    });
-
-    if (!newMovies) {
-      throw new NotFoundException('존재하지 않는 ID 값의 영화입니다.');
-    }
-
-    newMovies.genres = newGenres;
-
-    await this.movieRepository.save(newMovies);
-     */
   }
 
   async remove(id: number) {
@@ -270,5 +289,49 @@ export class MovieService {
     await this.movieDetailRepository.delete(movie.detail.id);
 
     return id;
+  }
+
+  async toggleMovieLike(movieId: number, userId: number, isLike: boolean) {
+    const movie = await this.movieRepository.findOne({
+      where: { id: movieId },
+    });
+
+    if (!movie) {
+      throw new BadRequestException('존재하지 않는 영화입니다.');
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new UnauthorizedException('존재하지 않는 사용자입니다.');
+    }
+
+    const likeRecord = await this.movieUserLikeRepository
+      .createQueryBuilder('mul')
+      .leftJoinAndSelect('mul.movie', 'movie')
+      .leftJoinAndSelect('mul.user', 'user')
+      .where('movie.id = :movieId', { movieId })
+      .andWhere('user.id = :userId', { userId })
+      .getOne();
+
+    if (likeRecord) {
+      if (likeRecord.isLike === isLike) {
+        await this.movieUserLikeRepository.delete({ movie, user });
+      } else {
+        await this.movieUserLikeRepository.update({ movie, user }, { isLike });
+      }
+    } else {
+      await this.movieUserLikeRepository.save({ movie, user, isLike });
+    }
+
+    const result = await this.movieUserLikeRepository
+      .createQueryBuilder('mul')
+      .leftJoinAndSelect('mul.movie', 'movie')
+      .leftJoinAndSelect('mul.user', 'user')
+      .where('movie.id = :movieId', { movieId })
+      .andWhere('user.id = :userId', { userId })
+      .getOne();
+
+    return { isLike: result && result.isLike };
   }
 }

@@ -27,6 +27,7 @@ import { ForbiddenExceptionFilter } from './common/filter/forbidden.filter';
 import { QueryFailedExceptionFilter } from './common/filter/query-failed.filter';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { MovieUserLike } from './movie/entity/movie-user-like.entity';
 
 @Module({
   imports: [
@@ -53,7 +54,7 @@ import { join } from 'path';
         username: configService.get<string>(envVariables.dbUserName),
         password: configService.get<string>(envVariables.dbPassword),
         database: configService.get<string>(envVariables.dbName),
-        entities: [Movie, MovieDetail, Director, Genre, User],
+        entities: [Movie, MovieDetail, MovieUserLike, Director, Genre, User],
         synchronize: true,
       }),
       inject: [ConfigService],

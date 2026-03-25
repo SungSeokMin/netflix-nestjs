@@ -1,4 +1,5 @@
 import { Exclude } from 'class-transformer';
+import { MovieUserLike } from 'src/movie/entity/movie-user-like.entity';
 import { Movie } from 'src/movie/entity/movie.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
@@ -32,4 +33,7 @@ export class User {
 
   @OneToMany(() => Movie, (movie) => movie.creator)
   createdMovies: Movie[];
+
+  @OneToMany(() => MovieUserLike, (mul) => mul.user)
+  likedMovies: MovieUserLike[];
 }
