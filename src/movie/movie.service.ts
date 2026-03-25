@@ -22,8 +22,8 @@ export class MovieService {
     private readonly dataSource: DataSource,
   ) {}
 
-  findAll(dto: GetMoviesDto) {
-    const { title, take, page } = dto;
+  async findAll(dto: GetMoviesDto) {
+    const { title } = dto;
 
     const qb = this.movieRepository
       .createQueryBuilder('movie')
@@ -36,9 +36,12 @@ export class MovieService {
       });
     }
 
-    this.commonService.applyPagePaginationParamsToQb(qb, { take, page });
+    const { nextCursor } =
+      await this.commonService.applyCursorPaginationParamsToQb(qb, dto);
 
-    return qb.getManyAndCount();
+    const [data, count] = await qb.getManyAndCount();
+
+    return { data, nextCursor, count };
   }
 
   async findOne(id: number) {
