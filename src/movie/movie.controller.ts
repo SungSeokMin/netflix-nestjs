@@ -12,6 +12,7 @@ import {
   Request,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Request as ExpressRequest } from 'express';
 import { MovieService } from './movie.service';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
@@ -20,7 +21,6 @@ import { RBAC } from 'src/auth/decorator/rbac.decorator';
 import { Role } from 'src/user/entity/user.entity';
 import { GetMoviesDto } from './dto/get-movies.dto';
 import { TransactionInterceptor } from 'src/common/interceptor/transaction.interceptor';
-import * as Express from 'express';
 
 @Controller('movie')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -42,7 +42,7 @@ export class MovieController {
   @Post()
   @RBAC(Role.admin)
   @UseInterceptors(TransactionInterceptor)
-  postMovie(@Body() dto: CreateMovieDto, @Request() req: Express.Request) {
+  postMovie(@Body() dto: CreateMovieDto, @Request() req: ExpressRequest) {
     return this.movieService.create(dto, req.queryRunner);
   }
 

@@ -10,6 +10,8 @@ import { Genre } from 'src/genre/entity/genre.entity';
 import { DataSource } from 'typeorm';
 import { GetMoviesDto } from './dto/get-movies.dto';
 import { CommonService } from 'src/common/common.service';
+import { join } from 'path';
+import { rename } from 'fs/promises';
 
 @Injectable()
 export class MovieService {
@@ -90,12 +92,21 @@ export class MovieService {
 
     const movieDetailId = movieDetail.identifiers[0].id as number;
 
+    const movieFolder = join('public', 'movie');
+    const tempFolder = join('public', 'temp');
+
+    await rename(
+      join(process.cwd(), tempFolder, createMovieDto.movieFileName),
+      join(process.cwd(), movieFolder, createMovieDto.movieFileName),
+    );
+
     const movie = await qr.manager
       .createQueryBuilder()
       .insert()
       .into(Movie)
       .values({
         title: createMovieDto.title,
+        movieFilePath: join(movieFolder, createMovieDto.movieFileName),
         detail: {
           id: movieDetailId,
         },
