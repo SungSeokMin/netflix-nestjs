@@ -19,16 +19,16 @@ import { UserModule } from './user/user.module';
 import { User } from './user/entity/user.entity';
 import { envVariables } from './common/const/env.const';
 import { BearerTokenMiddleware } from './auth/middleware/bearer-token.middleware';
-import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './auth/guard/auth.guard';
 import { RBACGuard } from './auth/guard/rbac.guard';
-import { ResponseTimeInterceptor } from './common/interceptor/response-time.interceptor';
 import { ForbiddenExceptionFilter } from './common/filter/forbidden.filter';
 import { QueryFailedExceptionFilter } from './common/filter/query-failed.filter';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { MovieUserLike } from './movie/entity/movie-user-like.entity';
 import { CacheModule } from '@nestjs/cache-manager';
+import { LoggerModule } from './common/logger/logger.module';
 
 @Module({
   imports: [
@@ -68,6 +68,7 @@ import { CacheModule } from '@nestjs/cache-manager';
       ttl: 3000,
       isGlobal: true,
     }),
+    LoggerModule,
     MovieModule,
     DirectorModule,
     GenreModule,
@@ -82,10 +83,6 @@ import { CacheModule } from '@nestjs/cache-manager';
     {
       provide: APP_GUARD,
       useClass: RBACGuard,
-    },
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: ResponseTimeInterceptor,
     },
     {
       provide: APP_FILTER,

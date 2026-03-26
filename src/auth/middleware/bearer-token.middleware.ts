@@ -34,7 +34,6 @@ export class BearerTokenMiddleware implements NestMiddleware {
     const token = this.validateBearerToken(authHeader);
 
     const blockedToken = await this.cacheManager.get(`BLOCK_TOKEN_${token}`);
-    console.log('🎯 [bearer-token.middleware.ts:37]', blockedToken);
     if (blockedToken) {
       throw new UnauthorizedException('차단된 토큰입니다.');
     }
