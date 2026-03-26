@@ -23,7 +23,9 @@ import { UserId } from 'src/user/decorator/user-id.decorator';
 import { QueryRunner } from 'src/common/decorator/query-runner.decorator';
 import type { QueryRunner as QR } from 'typeorm';
 import { CacheInterceptor as CI } from '@nestjs/cache-manager';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller('movie')
 @UseInterceptors(ClassSerializerInterceptor)
 export class MovieController {
@@ -31,6 +33,11 @@ export class MovieController {
 
   @Public()
   @Get()
+  @ApiOperation({ description: '[Movie]를 Pagination 하는 API' })
+  @ApiResponse({
+    status: 200,
+    description: '성공적으로 API Pagination 실행 했을때',
+  })
   getMovies(@Query() dto: GetMoviesDto, @UserId() userId?: number) {
     return this.movieService.findAll(dto, userId);
   }
@@ -38,7 +45,6 @@ export class MovieController {
   @Get('recent')
   @UseInterceptors(CI)
   getMoviesRecent() {
-    console.log('🎯 [movie.controller.ts:41]', '실행');
     return this.movieService.findRecent();
   }
 
