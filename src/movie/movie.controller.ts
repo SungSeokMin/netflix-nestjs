@@ -22,6 +22,7 @@ import { TransactionInterceptor } from 'src/common/interceptor/transaction.inter
 import { UserId } from 'src/user/decorator/user-id.decorator';
 import { QueryRunner } from 'src/common/decorator/query-runner.decorator';
 import type { QueryRunner as QR } from 'typeorm';
+import { CacheInterceptor as CI } from '@nestjs/cache-manager';
 
 @Controller('movie')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -32,6 +33,13 @@ export class MovieController {
   @Get()
   getMovies(@Query() dto: GetMoviesDto, @UserId() userId?: number) {
     return this.movieService.findAll(dto, userId);
+  }
+
+  @Get('recent')
+  @UseInterceptors(CI)
+  getMoviesRecent() {
+    console.log('🎯 [movie.controller.ts:41]', '실행');
+    return this.movieService.findRecent();
   }
 
   @Public()
